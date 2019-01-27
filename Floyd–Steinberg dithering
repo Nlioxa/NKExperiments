@@ -1,0 +1,65 @@
+# libs
+from numpy import array, fromiter
+from imageio import imread, imwrite
+from matplotlib.pyplot import plot, subplot
+from matplotlib import figure
+
+# read an image (as a numpy array)
+src_img = im.imread(R"C:\Users\NLIOXA\Desktop\PyApp\Dithering\kitten.jpg")
+
+# function to convert a colored image to grayscale one
+def gray_scale(image, convert_type):
+    grayscale_image = image.copy()
+    if convert_type in range(1, 4):
+        [width, height, colors] = image.shape
+        for i in range(0, width):
+            for j in range(0, height):
+                pix = image[i, j]
+                if convert_type is 1:
+                    ## 1. The lightness method averages the most prominent and least prominent colors: 
+                    # →(max(R, G, B) + min(R, G, B)) / 2.
+                    gray_scale_value = (min(pix) + max(pix)) / 2
+                elif convert_type is 2:
+                    ## 2. The average method simply averages the values: 
+                    # →(R + G + B) / 3.
+                    gray_scale_value = pix.sum() / 3
+                elif convert_type is 3:
+                    ## 3. The luminosity method is a more sophisticated version of the average method.
+                    ## We’re more sensitive to green than other colors, so green is weighted most heavily:
+                    # → 0.21 R + 0.72 G + 0.07 B.
+                    gray_scale_value = 0.21*pix[0] + 0.72*pix[1] + 0.07*pix[2]
+                grayscale_image[i, j] = [int(gray_scale_value) for i in range(colors)]
+    return grayscale_image
+
+# function to dither an image with Floyd–Steinberg dithering algorithm
+def floyd_steinberg_dithering(image, scale):
+    # deep copy of an image
+    new_img = image.copy()
+    # image shape
+    [width, height, colors] = new_img.shape
+    # max color value
+    max = new_img.max()
+    # func to find closest palette color
+    def suppose(color_value):
+        return round(color_value * scale / max) * round(max / scale)
+    for y in range(0, height - 1):
+        for x in range(1, width - 1):
+            old_pix = new_img[y, x]
+            new_pix = array([
+                round(color_value * scale / max) * round(max / scale)
+                for value in old_pix])
+            err_pix = old_pix - new_pix
+            new_img[y, x] = new_pix
+            new_img[y, x + 1] = [
+                new_img[y, x + 1][i] + (err_pix[i] * 7/16)
+                for i in range(colors)]
+            new_img[y, x - 1] = [
+                new_img[y, x - 1][i] + (err_pix[i] * 3/16)
+                for i in range(colors)]
+            new_img[y + 1, x] = [
+                new_img[y + 1, x][i] + (err_pix[i] * 5/16)
+                for i in range(colors)]
+            new_img[y + 1, x + 1] = [
+                new_img[y + 1, x + 1][i] + (err_pix[i] * 1/16)
+                for i in range(colors)]
+    return new_img
